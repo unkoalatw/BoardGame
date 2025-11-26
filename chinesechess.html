@@ -33,14 +33,16 @@
             display: flex; 
             flex-direction: column;
             align-items: center; 
-            justify-content: center;
+            justify-content: flex-start; /* 改為從頂部開始排列，避免內容被切掉 */
             min-height: 100vh;
             margin: 0;
+            padding: 20px 0; /* 增加上下緩衝 */
             background-color: var(--bg-color);
             color: #eee;
             user-select: none;
-            overflow: hidden;
-            perspective: 1000px; /* 為全息效果做準備 */
+            overflow-x: hidden;
+            overflow-y: auto; /* 啟用垂直捲動，防止按鈕在小螢幕被隱藏 */
+            perspective: 1000px;
         }
 
         /* 背景動態矩陣 */
@@ -86,25 +88,33 @@
             box-shadow: 0 0 15px rgba(0,0,0,0.5);
             position: relative;
             z-index: 10;
+            box-sizing: border-box; /* 確保內距不影響寬度 */
         }
 
         h1 {
             margin: 0;
-            font-size: 1.4rem;
+            font-size: 1.2rem; /* 稍微縮小字體以適應按鈕 */
             color: #fff;
             text-transform: uppercase;
             letter-spacing: 2px;
             text-shadow: 0 0 10px var(--neon-blue);
         }
 
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
         .turn-display {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             font-weight: 700;
-            padding: 4px 12px;
+            padding: 4px 8px;
             border: 1px solid currentColor;
             border-radius: 4px;
             text-shadow: 0 0 8px currentColor;
             box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            white-space: nowrap;
         }
 
         /* 戰俘區 - 能量條風格 */
@@ -340,7 +350,7 @@
             color: var(--neon-blue);
             border: 1px solid var(--neon-blue);
             padding: 10px 24px;
-            font-family: 'Orbitron', 'Noto Sans TC';
+            font-family: 'Orbitron';
             font-size: 14px;
             letter-spacing: 1px;
             cursor: pointer;
@@ -367,6 +377,12 @@
         .cyber-btn.primary:hover {
             background: rgba(252, 238, 10, 0.2);
             box-shadow: 0 0 20px var(--neon-yellow);
+        }
+        
+        .cyber-btn.small {
+            padding: 5px 12px;
+            font-size: 12px;
+            border-left: 3px solid var(--neon-blue);
         }
 
         /* 將軍特效 */
@@ -408,8 +424,12 @@
     <div class="cyber-bg"></div>
     <div class="cyber-vignette"></div>
 
+    <!-- 佈局調整：將返回按鈕移至頂部，確保可見 -->
     <div class="header-ui">
-        <h1>NEURAL CHESS</h1>
+        <div class="header-left">
+            <button class="cyber-btn small" onclick="location.href='index.html'">◀ 返回</button>
+            <h1>NEURAL CHESS</h1>
+        </div>
         <div class="turn-display" id="turn-badge" style="color: var(--neon-red);">
             RED: ACTIVE
         </div>
@@ -431,7 +451,6 @@
     </div>
 
     <div class="ctrl-panel">
-        <button class="cyber-btn" onclick="location.href='index.html'">返回大廳</button>
         <button class="cyber-btn" id="btn-undo" disabled>REWIND_DATA</button>
         <button class="cyber-btn primary" id="btn-reset">SYSTEM_RESET</button>
     </div>
