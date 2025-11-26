@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>機核覺醒：全域戰術介面 - CYBERPUNK DARK CHESS V4</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --void-black: #050510;
+            --neon-blue: #00f3ff;
+            --neon-red: #ff0055;
+            --neon-green: #39ff14;
+            --neon-yellow: #ffee00;
+            --glass-border: 1px solid rgba(255, 255, 255, 0.15);
+            --glow-blue: 0 0 5px var(--neon-blue);
+            --glow-red: 0 0 5px var(--neon-red);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background-color: var(--void-black);
+            color: var(--neon-blue);
+            font-family: 'Orbitron', 'Noto Sans TC', sans-serif;
+            height: 100dvh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .cyber-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background:
+                linear-gradient(transparent 0%, rgba(0, 243, 255, 0.03) 50%, transparent 100%),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px);
+            background-size: 100% 2px, 40px 40px;
+            z-index: -10;
+        }
+
+        /* --- 1. 基礎佈局 (手機 Mobile First) --- */
+        /* 預設為垂直堆疊，這對手機和平板直立模式最友善 */
+        .main-interface {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 10px;
+            /* 手機版限制寬度，避免過寬 */
+            max-width: 600px; 
+        /* 戰俘區 (手機版：修正樣式，改為標籤橫向置頂) */
+        .prison-bar {
+            /* 取消固定高度，改用 min-height 讓內容撐開 */
+            min-height: 65px; 
+            background: rgba(2, 2, 5, 0.6); 
+            border: var(--glass-border);
+            margin-bottom: 5px;
+            display: flex; 
+            /* 關鍵修改：改為垂直堆疊 (Column)，讓標籤跑到上方 */
+            flex-direction: column; 
+            justify-content: center;
+            padding: 5px 10px;
+            position: relative; flex-shrink: 0;
+            z-index: 5; 
+            backdrop-filter: blur(4px);
+        }
+        #prison-blk-container { grid-area: left; }
+        #prison-red-container { grid-area: right; }
+
+        .prison-label {
+            font-size: 0.7rem; 
+            /* 關鍵修改：改回橫向書寫 */
+            writing-mode: horizontal-tb; 
+            width: 100%;
+            color: rgba(255,255,255,0.5); 
+            /* 增加底部間距與分隔線 */
+            margin-bottom: 5px;
+            border-bottom: 1px solid rgba(255,255,255,0.1); 
+            padding-bottom: 2px;
+            /* 清除原本豎排的邊框與間距 */
+            margin-right: 0; 
+            border-right: none; 
+            padding-right: 0;
+            text-align: left;
+            letter-spacing: 1px;
+        }
+        .prisoner-scroll {
+            display: flex; overflow-x: auto; gap: 5px; width: 100%;
+            scrollbar-width: none; -ms-overflow-style: none;
+        }
+        .prisoner-scroll::-webkit-scrollbar { display: none; }
+
+        /* 棋盤容器 */
+        .board-container {
+            flex-grow: 1;
+            display: flex; justify-content: center; align-items: center;
+            position: relative; perspective: 800px;
+            width: 100%;
+            grid-area: mid;
+            min-width: 0;
+            z-index: 10; /* 提升層級：確保棋盤永遠在最上層，不會被面板蓋住 */
+        }
+
+        .chess-board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr); 
+            grid-template-rows: repeat(4, 1fr);
+            gap: 4px; padding: 5px;
+            background: rgba(0, 20, 40, 0.6);
+            border: 1px solid var(--neon-blue);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
+            position: relative;
+            width: 100%;
+            /* 保持比例，但允許根據高度自適應 */
+            aspect-ratio: 2 / 1;
+        }
+
+        /* 格子與棋子 */
+        .cell {
+            position: relative; border: 1px solid rgba(0, 243, 255, 0.1);
+            display: flex; justify-content: center; align-items: center;
+        }
+        .cell.highlight-move { border: 1px dashed var(--neon-green); box-shadow: inset 0 0 5px var(--neon-green); }
+        .cell.highlight-attack { border: 1px solid var(--neon-red); box-shadow: inset 0 0 10px var(--neon-red); background: rgba(255, 0, 85, 0.1); }
+
+        .piece {
+            width: 85%; height: 85%; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            /* 智能字體大小：隨視窗縮放 */
+            font-size: clamp(0.8rem, 3.5vw, 2rem); 
+            font-weight: 700;
+            position: relative; background: #000;
+            border: 2px solid rgba(255,255,255,0.2); z-index: 2;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .prisoner-scroll .piece { width: 35px; height: 35px; font-size: 0.8rem; border-width: 1px; flex-shrink: 0; }
+        .piece.facedown { background: radial-gradient(circle, #1a1a2e 0%, #000 100%); border-color: var(--neon-blue); color: transparent; }
+        .piece.facedown::after { content: ''; position: absolute; width: 40%; height: 40%; border: 2px solid var(--neon-blue); transform: rotate(45deg); }
+        .piece.red { border-color: var(--neon-red); color: var(--neon-red); box-shadow: inset 0 0 5px rgba(255,0,85,0.5); }
+        .piece.black { border-color: var(--neon-blue); color: var(--neon-blue); box-shadow: inset 0 0 5px rgba(0,243,255,0.5); }
+        .piece.selected { transform: scale(1.15); z-index: 10; box-shadow: 0 0 15px var(--neon-yellow); border-color: var(--neon-yellow); }
+
+        .status-display { font-size: 1.1rem; font-weight: 900; text-shadow: 0 0 5px currentColor; }
+        .turn-indicator { font-size: 0.8rem; padding: 2px 8px; border: 1px solid currentColor; border-radius: 4px; }
+        .mini-log { font-family: 'Consolas', monospace; font-size: 0.75rem; color: rgba(0, 243, 255, 0.7); background: rgba(0,0,0,0.5); padding: 5px; border-left: 2px solid var(--neon-blue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; height: 25px; }
+        .controls { display: flex; justify-content: center; padding-top: 5px; }
+        .btn { background: rgba(0, 50, 0, 0.5); color: var(--neon-green); border: 1px solid var(--neon-green); padding: 12px 40px; font-family: 'Orbitron'; font-size: 1rem; clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); cursor: pointer; }
+        .btn:active { background: var(--neon-green); color: black; }
+
+        /* 特效層 */
+        .fx-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 99; overflow: hidden; }
+        .laser-beam { position: absolute; height: 3px; background: #fff; box-shadow: 0 0 5px var(--neon-red); transform-origin: left center; opacity: 0; animation: laserShot 0.3s ease-out forwards; }
+        @keyframes laserShot { 0% { opacity: 1; transform: scaleX(0); } 100% { opacity: 0; transform: scaleX(1); } }
+        .particle { position: absolute; width: 3px; height: 3px; background: var(--color); animation: explode 0.5s ease-out forwards; }
+        @keyframes explode { 0% { opacity: 1; transform: translate(0,0); } 100% { opacity: 0; transform: translate(var(--tx), var(--ty)); } }
+        .shake { animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } }
+
+        /* --- 2. 平板優化 (768px - 1099px) --- */
+        /* 在這個區間，我們保持垂直佈局，但放寬寬度限制，讓棋盤更大 */
+        @media (min-width: 768px) and (max-width: 1099px) {
+            .main-interface {
+                max-width: 90%; /* 平板上佔比更大 */
+                padding: 20px;
+            }
+            .chess-board {
+                /* 平板上棋盤可以更大 */
+                gap: 6px;
+            }
+            .prison-bar {
+                height: 60px; /* 戰俘區稍微加高 */
+            }
+            .piece {
+                font-size: 1.8rem;
+            }
+        }
+
+        /* --- 3. 真正的桌面體驗 (min-width: 1100px) --- */
+        /* 只有當螢幕真的夠寬時，才切換成帥氣的三欄式戰情室佈局 */
+        @media (min-width: 1100px) {
+            .main-interface {
+                max-width: 1600px;
+                display: grid;
+                /* 側邊欄彈性寬度，中間棋盤自適應 */
+                grid-template-columns: minmax(200px, 250px) 1fr minmax(200px, 250px); 
+                grid-template-rows: auto 1fr auto;
+                grid-template-areas: 
+                    "top top top"
+                    "left mid right"
+                    "bot bot bot";
+                gap: 30px;
+                padding: 40px;
+            }
+
+            .prison-bar { 
+                height: 100%; 
+                flex-direction: column; 
+                width: 100%; 
+                padding: 15px 0;
+                background: rgba(2, 2, 5, 0.4);
+            }
+            
+            .board-container {
+                width: 100%;
+                height: 100%;
+                min-width: 0; 
+            }
+
+            .chess-board {
+                width: 100%;
+                max-width: 1200px; 
+                aspect-ratio: 2 / 1;
+                gap: 10px; /* 電腦版間距更寬鬆 */
+            }
+            
+            .piece { font-size: 2.5rem; } /* 電腦版字體更大 */
+
+            .prison-label { writing-mode: horizontal-tb; margin-bottom: 15px; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.2); width: 100%; text-align: center; font-size: 0.9rem; padding-bottom: 5px; }
+            .prisoner-scroll { flex-direction: column; overflow-x: hidden; overflow-y: auto; align-items: center; gap: 10px; padding: 10px 0; }
+            .prisoner-scroll .piece { width: 45px; height: 45px; font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="cyber-bg"></div>
+
+    <div class="main-interface" id="main-ui">
+        
+        <div class="top-bar">
+            <div class="status-display" id="status-text" style="color: var(--neon-green);">SYSTEM READY</div>
+            <div class="turn-indicator" id="turn-badge">WAITING</div>
+        </div>
+        
+        <!-- 左/上戰俘區 -->
+        <div class="prison-bar" id="prison-blk-container" style="border-color: var(--neon-blue);">
+            <div class="prison-label">CAPTURED_BLK</div>
+            <div class="prisoner-scroll" id="black-prison"></div>
+        </div>
+
+        <!-- 中央棋盤 -->
+        <div class="board-container">
+            <div class="chess-board" id="board">
+                <div class="fx-container" id="fx-layer"></div>
+            </div>
+        </div>
+
+        <!-- 右/下戰俘區 -->
+        <div class="prison-bar" id="prison-red-container" style="border-color: var(--neon-red);">
+            <div class="prison-label">CAPTURED_RED</div>
+            <div class="prisoner-scroll" id="red-prison"></div>
+        </div>
+
+        <div class="bottom-panel">
+            <div class="mini-log" id="mini-log">> SYSTEM_INIT_COMPLETE...</div>
+            <div class="controls">
+                <button class="btn" onclick="initGame()">REBOOT SYSTEM</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ROWS = 4; const COLS = 8;
+        let boardState = []; let turnColor = null; let selectedIndex = null; let isGameOver = false;
+
+        const PIECES_DEF = [
+            { name: '帥', color: 'red', rank: 7, count: 1 }, { name: '仕', color: 'red', rank: 6, count: 2 },
+            { name: '相', color: 'red', rank: 5, count: 2 }, { name: '俥', color: 'red', rank: 4, count: 2 },
+            { name: '傌', color: 'red', rank: 3, count: 2 }, { name: '炮', color: 'red', rank: 2, count: 2 },
+            { name: '兵', color: 'red', rank: 1, count: 5 },
+            { name: '將', color: 'black', rank: 7, count: 1 }, { name: '士', color: 'black', rank: 6, count: 2 },
+            { name: '象', color: 'black', rank: 5, count: 2 }, { name: '車', color: 'black', rank: 4, count: 2 },
+            { name: '馬', color: 'black', rank: 3, count: 2 }, { name: '包', color: 'black', rank: 2, count: 2 },
+            { name: '卒', color: 'black', rank: 1, count: 5 }
+        ];
+
+        const boardEl = document.getElementById('board');
+        const fxLayer = document.getElementById('fx-layer');
+        const statusEl = document.getElementById('status-text');
+        const turnBadge = document.getElementById('turn-badge');
+        const miniLogEl = document.getElementById('mini-log');
+
+        function log(msg, isUrgent = false) {
+            miniLogEl.innerHTML = `> ${msg}`;
+            if(isUrgent) {
+                miniLogEl.style.color = 'var(--neon-red)';
+                setTimeout(() => miniLogEl.style.color = 'rgba(0, 243, 255, 0.7)', 1000);
+            }
+        }
+
+        function initGame() {
+            boardState = Array(ROWS * COLS).fill(null);
+            turnColor = null; selectedIndex = null; isGameOver = false;
+            
+            document.querySelectorAll('.cell').forEach(c => c.remove());
+            document.getElementById('red-prison').innerHTML = '';
+            document.getElementById('black-prison').innerHTML = '';
+            fxLayer.innerHTML = '';
+            
+            statusEl.innerText = "SYSTEM REBOOTING"; statusEl.style.color = "var(--neon-green)";
+            turnBadge.innerText = "WAITING"; turnBadge.style.color = "gray";
+
+            let pool = [];
+            PIECES_DEF.forEach(p => {
+                for(let i=0; i<p.count; i++) pool.push({...p, facedown: true});
+            });
+            for (let i = pool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pool[i], pool[j]] = [pool[j], pool[i]];
+            }
+
+            pool.forEach((piece, i) => {
+                boardState[i] = piece;
+                const cell = document.createElement('div');
+                cell.className = 'cell'; cell.dataset.index = i;
+                cell.onclick = () => handleInput(i); 
+                boardEl.appendChild(cell);
+            });
+            renderBoard();
+        }
+
+        function renderBoard() {
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach((cell, i) => {
+                const existingPiece = cell.querySelector('.piece');
+                if(existingPiece) existingPiece.remove();
+                cell.className = 'cell'; 
+                const piece = boardState[i];
+                if(piece) {
+                    const pDiv = document.createElement('div');
+                    pDiv.className = `piece ${piece.facedown ? 'facedown' : piece.color}`;
+                    if (!piece.facedown) pDiv.innerText = piece.name;
+                    if (i === selectedIndex) pDiv.classList.add('selected');
+                    cell.appendChild(pDiv);
+                }
+            });
+            if (selectedIndex !== null && !isGameOver) showTacticalOverlay(selectedIndex);
+        }
+
+        function showTacticalOverlay(fromIdx) {
+            const cells = document.querySelectorAll('.cell');
+            for (let i = 0; i < ROWS * COLS; i++) {
+                if (i === fromIdx) continue;
+                if (!boardState[i] && isValidMove(fromIdx, i)) cells[i].classList.add('highlight-move');
+                else if (boardState[i] && isValidAttack(fromIdx, i)) cells[i].classList.add('highlight-attack');
+            }
+        }
+
+        function handleInput(index) {
+            if (isGameOver) return;
+            const targetPiece = boardState[index];
+            if (targetPiece && targetPiece.facedown) { revealPiece(index); return; }
+            if (targetPiece && targetPiece.color === turnColor) { selectedIndex = index; renderBoard(); log(`SELECTED: ${targetPiece.name}`); return; }
+            if (selectedIndex !== null) {
+                if (!targetPiece) { if (isValidMove(selectedIndex, index)) movePiece(selectedIndex, index); } 
+                else { if (isValidAttack(selectedIndex, index)) attackPiece(selectedIndex, index); }
+            }
+        }
+
+        function revealPiece(index) {
+            const p = boardState[index]; p.facedown = false; triggerShake();
+            if (!turnColor) { turnColor = p.color; log(`DETECTED: ${turnColor.toUpperCase()} GOES FIRST`, true); } 
+            else { nextTurn(); }
+            selectedIndex = null; renderBoard();
+        }
+
+        function movePiece(from, to) {
+            boardState[to] = boardState[from]; boardState[from] = null; selectedIndex = null;
+            renderBoard(); nextTurn();
+        }
+
+        function attackPiece(from, to) {
+            const attacker = boardState[from]; const victim = boardState[to]; triggerShake();
+            if (attacker.rank === 2) { fireRailgun(from, to); log(`RAILGUN: ${attacker.name} >> ${victim.name}`, true); } 
+            else { log(`DESTROYED: ${victim.name}`, true); }
+            createExplosion(to, victim.color);
+            const prisonId = victim.color === 'red' ? 'red-prison' : 'black-prison';
+            const pDiv = document.createElement('div'); pDiv.className = `piece ${victim.color}`; pDiv.innerText = victim.name;
+            document.getElementById(prisonId).appendChild(pDiv);
+            const prisonEl = document.getElementById(prisonId); setTimeout(() => prisonEl.scrollTop = prisonEl.scrollHeight, 100);
+            boardState[to] = attacker; boardState[from] = null; selectedIndex = null;
+            setTimeout(() => { renderBoard(); checkWin(); if (!isGameOver) nextTurn(); }, 250);
+        }
+
+        function nextTurn() {
+            turnColor = turnColor === 'red' ? 'black' : 'red';
+            const colorCode = turnColor === 'red' ? 'var(--neon-red)' : 'var(--neon-blue)';
+            statusEl.innerText = `TURN: ${turnColor.toUpperCase()}`; statusEl.style.color = colorCode;
+            turnBadge.innerText = turnColor.toUpperCase(); turnBadge.style.borderColor = colorCode; turnBadge.style.color = colorCode;
+        }
+
+        function getCoords(index) { return { r: Math.floor(index / COLS), c: index % COLS }; }
+        function isValidMove(from, to) {
+            const p1 = getCoords(from); const p2 = getCoords(to);
+            return Math.abs(p1.r - p2.r) + Math.abs(p1.c - p2.c) === 1;
+        }
+        function isValidAttack(from, to) {
+            const attacker = boardState[from]; const victim = boardState[to];
+            if (attacker.color === victim.color || victim.facedown) return false;
+            if (attacker.rank === 2) return isCannonShot(from, to);
+            if (!isValidMove(from, to)) return false;
+            if (attacker.rank === 1 && victim.rank === 7) return true;
+            if (attacker.rank === 7 && victim.rank === 1) return false;
+            return attacker.rank >= victim.rank;
+        }
+        function isCannonShot(from, to) {
+            const c1 = getCoords(from); const c2 = getCoords(to);
+            if (c1.r !== c2.r && c1.c !== c2.c) return false;
+            let count = 0;
+            if (c1.r === c2.r) {
+                const min = Math.min(c1.c, c2.c), max = Math.max(c1.c, c2.c);
+                for (let c = min + 1; c < max; c++) if (boardState[c1.r * COLS + c]) count++;
+            } else {
+                const min = Math.min(c1.r, c2.r), max = Math.max(c1.r, c2.r);
+                for (let r = min + 1; r < max; r++) if (boardState[r * COLS + c1.c]) count++;
+            }
+            return count === 1;
+        }
+        function checkWin() {
+            const redAlive = boardState.some(p => p && p.color === 'red'); const blackAlive = boardState.some(p => p && p.color === 'black');
+            if (!redAlive || !blackAlive) {
+                isGameOver = true; const winner = redAlive ? 'RED' : 'BLACK';
+                statusEl.innerText = `${winner} WINS`; log(`GAME OVER. ${winner} VICTORIOUS.`);
+            }
+        }
+
+        function triggerShake() {
+            const ui = document.getElementById('main-ui'); ui.classList.remove('shake'); void ui.offsetWidth; ui.classList.add('shake');
+            if (navigator.vibrate) navigator.vibrate(50);
+        }
+        function fireRailgun(from, to) {
+            const cells = document.querySelectorAll('.cell');
+            const rect1 = cells[from].getBoundingClientRect(); const rect2 = cells[to].getBoundingClientRect();
+            const containerRect = boardEl.getBoundingClientRect();
+            const x1 = rect1.left + rect1.width/2 - containerRect.left; const y1 = rect1.top + rect1.height/2 - containerRect.top;
+            const x2 = rect2.left + rect2.width/2 - containerRect.left; const y2 = rect2.top + rect2.height/2 - containerRect.top;
+            const length = Math.hypot(x2 - x1, y2 - y1); const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+            const laser = document.createElement('div'); laser.className = 'laser-beam';
+            laser.style.width = `${length}px`; laser.style.left = `${x1}px`; laser.style.top = `${y1}px`; laser.style.transform = `rotate(${angle}deg)`;
+            fxLayer.appendChild(laser); setTimeout(() => laser.remove(), 400);
+        }
+        function createExplosion(index, colorType) {
+            const cell = document.querySelectorAll('.cell')[index]; const rect = cell.getBoundingClientRect();
+            const containerRect = boardEl.getBoundingClientRect();
+            const cx = rect.left + rect.width/2 - containerRect.left; const cy = rect.top + rect.height/2 - containerRect.top;
+            const colorVar = colorType === 'red' ? 'var(--neon-red)' : 'var(--neon-blue)';
+            for (let i = 0; i < 15; i++) {
+                const p = document.createElement('div'); p.className = 'particle';
+                p.style.setProperty('--color', colorVar); p.style.left = `${cx}px`; p.style.top = `${cy}px`;
+                const angle = Math.random() * Math.PI * 2; const dist = 20 + Math.random() * 40;
+                p.style.setProperty('--tx', Math.cos(angle) * dist + 'px'); p.style.setProperty('--ty', Math.sin(angle) * dist + 'px');
+                fxLayer.appendChild(p); setTimeout(() => p.remove(), 500);
+            }
+        }
+        initGame();
+    </script>
+</body>
+</html>
