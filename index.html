@@ -11,7 +11,7 @@
             --neon-blue: #00f3ff;
             --neon-red: #ff0055;
             --neon-green: #39ff14;
-            --neon-purple: #bc13fe;
+            --neon-purple: #bc13fe; /* 西洋棋主題色 */
             --glass-bg: rgba(255, 255, 255, 0.05);
         }
 
@@ -28,13 +28,30 @@
             color: #fff;
             font-family: 'Orbitron', 'Noto Sans TC', sans-serif;
             overflow-x: hidden;
-            overflow-y: auto; /* 允許垂直滾動以適應小螢幕 */
+            overflow-y: auto;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             perspective: 1200px;
+        }
+
+        /* --- 點擊衝擊波特效 --- */
+        .shockwave {
+            position: fixed;
+            border-radius: 50%;
+            border: 2px solid var(--neon-blue);
+            transform: translate(-50%, -50%) scale(0);
+            pointer-events: none;
+            z-index: 9990;
+            animation: shockwave-anim 0.6s ease-out forwards;
+            box-shadow: 0 0 20px var(--neon-blue), inset 0 0 20px var(--neon-blue);
+        }
+
+        @keyframes shockwave-anim {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 1; border-width: 5px; }
+            100% { transform: translate(-50%, -50%) scale(4); opacity: 0; border-width: 0px; }
         }
 
         /* --- 霓虹 HUD 裝飾層 --- */
@@ -92,11 +109,25 @@
             z-index: -2;
         }
 
-        /* --- 戰術游標系統 --- */
+        /* --- Canvas 視覺化光環 (Visualizer) --- */
+        #viz-canvas {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px; height: 300px;
+            pointer-events: none;
+            z-index: -1; /* 在核心後面 */
+        }
+
+        /* --- 戰術游標系統 (修正版) --- */
         #cursor-follower {
             position: fixed; pointer-events: none; z-index: 9999;
+            /* 使用 translate(-50%, -50%) 來確保滑鼠座標對應到 div 中心 */
             transform: translate(-50%, -50%);
             mix-blend-mode: screen;
+            /* 增加 Flex 讓子元素絕對置中 */
+            display: flex; justify-content: center; align-items: center;
+            width: 0; height: 0; /* 避免容器本身大小影響定位 */
         }
         
         .cursor-ring {
@@ -105,6 +136,10 @@
             border-radius: 50%;
             box-shadow: 0 0 10px var(--neon-blue);
             transition: 0.1s transform, 0.2s width, 0.2s height, 0.2s border-color;
+            /* 確保 ring 本身不影響佈局流 */
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
             display: flex; justify-content: center; align-items: center;
         }
         
@@ -112,6 +147,9 @@
             width: 4px; height: 4px; background: var(--neon-blue);
             box-shadow: 0 0 8px #fff;
             position: absolute;
+            /* 關鍵修正：強制置中 */
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
         }
 
         #cursor-follower.attack .cursor-ring {
@@ -119,7 +157,7 @@
             border-color: var(--neon-red);
             border-style: dashed;
             box-shadow: 0 0 20px var(--neon-red);
-            animation: rotate-cursor 2s linear infinite;
+            animation: rotate-cursor 2s linear infinite; /* 旋轉動畫 */
             background: rgba(255, 0, 85, 0.1);
         }
         
@@ -131,9 +169,11 @@
             pointer-events: none; z-index: 9998;
             opacity: 0.5;
             transition: opacity 0.5s;
+            /* 修正拖尾也需要置中 */
+            transform: translate(-50%, -50%);
         }
 
-        @keyframes rotate-cursor { 100% { transform: rotate(360deg); } }
+        @keyframes rotate-cursor { 100% { transform: translate(-50%, -50%) rotate(360deg); } }
 
         /* --- 主標題 --- */
         .main-header {
@@ -146,7 +186,7 @@
         }
 
         h1 {
-            font-size: clamp(2.5rem, 5vw, 4rem); /* RWD Font Size */
+            font-size: clamp(2.5rem, 5vw, 4rem);
             margin: 0;
             letter-spacing: 10px;
             color: #fff;
@@ -184,6 +224,7 @@
             transform-style: preserve-3d;
             perspective: 600px;
             flex-shrink: 0;
+            display: flex; justify-content: center; align-items: center;
         }
 
         .holo-ring {
@@ -213,16 +254,17 @@
             box-shadow: 0 0 40px var(--neon-blue), 0 0 80px var(--neon-blue);
             border-radius: 50%;
             animation: pulse 2s ease-in-out infinite;
+            z-index: 2;
         }
 
         @keyframes spin { 0% { transform: rotateX(60deg) rotateZ(0deg); } 100% { transform: rotateX(60deg) rotateZ(360deg); } }
         @keyframes spin-rev { 0% { transform: rotateX(-60deg) rotateZ(360deg); } 100% { transform: rotateX(-60deg) rotateZ(0deg); } }
         @keyframes pulse { 0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; } 50% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; box-shadow: 0 0 60px var(--neon-blue), 0 0 100px var(--neon-blue); } }
 
-        /* --- 遊戲卡片 (液態玻璃風格 - 強度提升) --- */
+        /* --- 遊戲卡片 (液態玻璃 - 強度提升) --- */
         .card-container {
             display: flex;
-            flex-wrap: wrap; /* 關鍵：允許換行 */
+            flex-wrap: wrap; 
             justify-content: center;
             gap: 40px;
             z-index: 10;
@@ -232,29 +274,24 @@
         }
 
         .game-card {
-            flex: 1 1 280px; /* 彈性寬度：基礎 280px，可伸展 */
+            flex: 1 1 280px; 
             max-width: 350px;
             height: 420px;
             
-            /* 液態玻璃核心樣式 - 強度升級 */
-            /* 加入漸層讓光澤感更強 */
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.01)); 
             
-            /* 提高模糊與飽和度 */
             backdrop-filter: blur(40px) saturate(200%);
             -webkit-backdrop-filter: blur(40px) saturate(200%);
             
             border-radius: 20px;
             
-            /* 更銳利的邊緣高光 */
             border: 1px solid rgba(255, 255, 255, 0.18);
-            border-top: 1px solid rgba(255, 255, 255, 0.6); /* 更亮 */
-            border-left: 1px solid rgba(255, 255, 255, 0.6); /* 更亮 */
+            border-top: 1px solid rgba(255, 255, 255, 0.6); 
+            border-left: 1px solid rgba(255, 255, 255, 0.6); 
             
-            /* 加深陰影以突顯立體感，加強內部光澤 */
             box-shadow: 
                 0 15px 35px 0 rgba(0, 0, 0, 0.5),
-                inset 0 0 30px rgba(255, 255, 255, 0.15); /* 內部反光更強 */
+                inset 0 0 30px rgba(255, 255, 255, 0.15); 
             
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             position: relative;
@@ -264,13 +301,12 @@
             transform-style: preserve-3d;
         }
 
-        /* 液態流動背景 */
         .game-card::before {
             content: '';
             position: absolute;
             top: -50%; left: -50%;
             width: 200%; height: 200%;
-            background: radial-gradient(circle at center, rgba(0, 243, 255, 0.15), transparent 50%); /* 略微調亮流動光 */
+            background: radial-gradient(circle at center, rgba(0, 243, 255, 0.15), transparent 50%); 
             opacity: 0;
             transform: rotate(0deg);
             transition: opacity 0.5s;
@@ -280,7 +316,6 @@
 
         .game-card:hover { 
             transform: translateY(-10px) scale(1.02);
-            /* 懸停時增強光影 */
             box-shadow: 
                 0 25px 50px 0 rgba(0, 0, 0, 0.6),
                 inset 0 0 40px rgba(255, 255, 255, 0.2);
@@ -295,12 +330,20 @@
 
         @keyframes liquid-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-        /* 顏色主題 */
+        /* 陣營特定樣式：象棋 (Red) */
         .card-chess:hover { border-color: rgba(255, 51, 102, 0.5); }
         .card-chess:hover::before { background: radial-gradient(circle at center, rgba(255, 51, 102, 0.25), transparent 60%); }
-        
+        .card-chess .card-icon { color: var(--neon-red); }
+
+        /* 陣營特定樣式：暗棋 (Blue) */
         .card-dark:hover { border-color: rgba(0, 229, 255, 0.5); }
         .card-dark:hover::before { background: radial-gradient(circle at center, rgba(0, 229, 255, 0.25), transparent 60%); }
+        .card-dark .card-icon { color: var(--neon-blue); }
+
+        /* 陣營特定樣式：西洋棋 (Purple) */
+        .card-western:hover { border-color: rgba(188, 19, 254, 0.5); }
+        .card-western:hover::before { background: radial-gradient(circle at center, rgba(188, 19, 254, 0.25), transparent 60%); }
+        .card-western .card-icon { color: var(--neon-purple); }
 
         .card-icon {
             font-size: 5rem; margin-bottom: 30px;
@@ -318,18 +361,18 @@
 
         .game-desc {
             font-family: 'Noto Sans TC'; font-size: 0.95rem;
-            color: rgba(255,255,255,0.9); /* 字體略亮 */
+            color: rgba(255,255,255,0.9);
             text-align: center;
             margin-top: 15px; line-height: 1.6;
             transform: translateZ(20px);
             padding: 0 20px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8); /* 增加可讀性 */
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
 
         .play-indicator {
             margin-top: 40px; padding: 10px 25px;
             font-size: 0.9rem; letter-spacing: 2px;
-            background: rgba(255,255,255,0.15); /* 更亮一點 */
+            background: rgba(255,255,255,0.15);
             border-radius: 30px;
             border: 1px solid rgba(255,255,255,0.3);
             color: #fff;
@@ -342,9 +385,6 @@
         .game-card:hover .play-indicator {
             background: #fff; color: #000; box-shadow: 0 0 20px rgba(255,255,255,0.6);
         }
-
-        .card-chess .card-icon { color: var(--neon-red); }
-        .card-dark .card-icon { color: var(--neon-blue); }
 
         /* --- UI 元素 --- */
         .sound-toggle {
@@ -364,17 +404,15 @@
 
         /* --- RWD 優化 --- */
         @media (max-width: 768px) {
-            .hud-layer { display: none; } /* 手機隱藏外框以增加空間 */
+            .hud-layer { display: none; }
             h1 { margin-top: 20px; letter-spacing: 5px; }
             .holo-core-wrapper { transform: scale(0.8); margin-bottom: 20px; }
             .card-container { gap: 20px; padding-bottom: 60px; }
             .game-card { height: 200px; flex-direction: row; padding: 20px; text-align: left; justify-content: flex-start; }
             .card-icon { font-size: 3rem; margin: 0 20px 0 0; }
-            .game-desc { display: none; } /* 手機版隱藏描述 */
+            .game-desc { display: none; }
             .play-indicator { display: none; }
             .game-title { font-size: 1.4rem; text-align: left; }
-            
-            /* 手機恢復游標 */
             * { cursor: auto !important; }
             #cursor-follower, .cursor-trail { display: none; }
         }
@@ -391,12 +429,12 @@
         }
     </style>
 </head>
-<body>
+<body onclick="createShockwave(event)">
 
     <!-- 啟動畫面 -->
     <div id="boot-layer">
-        <div style="font-size: 2rem; font-weight: bold;">NEURAL_BIOS v6.1</div>
-        <div id="boot-log" style="margin-top: 20px; color: #666;">Enhancing Liquid Density...</div>
+        <div style="font-size: 2rem; font-weight: bold;">NEURAL_BIOS v8.1</div>
+        <div id="boot-log" style="margin-top: 20px; color: #666;">Calibrating Input Vectors...</div>
     </div>
 
     <div class="crt-overlay"></div>
@@ -419,7 +457,7 @@
         <div class="cursor-dot"></div>
     </div>
 
-    <div class="sound-toggle" id="btn-sound" onclick="toggleSound()">[ AUDIO: OFF ]</div>
+    <div class="sound-toggle" id="btn-sound" onclick="event.stopPropagation(); toggleSound()">[ AUDIO: OFF ]</div>
 
     <div class="main-header">
         <h1>NEURAL HUB</h1>
@@ -427,14 +465,16 @@
     </div>
 
     <div class="holo-core-wrapper">
+        <!-- 音頻視覺化 Canvas -->
+        <canvas id="viz-canvas" width="300" height="300"></canvas>
         <div class="holo-ring"></div>
         <div class="holo-ring"></div>
         <div class="core-sphere" id="core-light"></div>
     </div>
 
     <div class="card-container">
-        <!-- 象棋 -->
-        <a href="chinesechess.html" class="game-card card-chess" 
+        <!-- 象棋 (Red) -->
+        <a href="chinesechess/index.html" class="game-card card-chess" 
            onmouseenter="onHoverGame('red')" onmouseleave="onLeaveGame()" onmousemove="tiltCard(event, this)">
             <div class="card-icon">帥</div>
             <div>
@@ -444,8 +484,8 @@
             </div>
         </a>
 
-        <!-- 暗棋 -->
-        <a href="darkchess.html" class="game-card card-dark"
+        <!-- 暗棋 (Blue) -->
+        <a href="darkchess/index.html" class="game-card card-dark"
            onmouseenter="onHoverGame('blue')" onmouseleave="onLeaveGame()" onmousemove="tiltCard(event, this)">
             <div class="card-icon">?</div>
             <div>
@@ -454,14 +494,25 @@
                 <div class="play-indicator">>> INITIATE</div>
             </div>
         </a>
+
+        <!-- 西洋棋 (Purple) -->
+        <a href="chess/index.html" class="game-card card-western"
+           onmouseenter="onHoverGame('purple')" onmouseleave="onLeaveGame()" onmousemove="tiltCard(event, this)">
+            <div class="card-icon">♚</div>
+            <div>
+                <div class="game-title">WESTERN CHESS</div>
+                <div class="game-desc">經典國際戰棋 / 深度策略</div>
+                <div class="play-indicator">>> INITIATE</div>
+            </div>
+        </a>
     </div>
 
     <div class="system-footer">
-        SYS_STATUS: OPTIMAL // LIQUID_UI: HIGH_DENSITY
+        SYS_STATUS: OPTIMAL // CURSOR_ALIGNMENT: CORRECTED
     </div>
 
     <script>
-        // --- 1. Starfield ---
+        // --- 1. Starfield & Data Fragments ---
         const canvas = document.getElementById('starfield-canvas');
         const ctx = canvas.getContext('2d');
         let width, height;
@@ -478,12 +529,14 @@
         window.addEventListener('resize', resize);
         resize();
 
-        class Star {
+        class Particle {
             constructor() { this.reset(); }
             reset() {
                 this.x = (Math.random() - 0.5) * width * 2;
                 this.y = (Math.random() - 0.5) * height * 2;
                 this.z = Math.random() * 1000 + 500;
+                this.isText = Math.random() > 0.9; 
+                this.text = Math.floor(Math.random() * 255).toString(16).toUpperCase().padStart(2, '0');
             }
             update() {
                 let offsetX = (mouseX - width/2) * 2;
@@ -500,20 +553,29 @@
                 let sy = (this.y / this.z) * 500 + height / 2;
                 let px = (this.x / (this.z + 20 * speedMult)) * 500 + width / 2;
                 let py = (this.y / (this.z + 20 * speedMult)) * 500 + height / 2;
+                
                 if (sx > 0 && sx < width && sy > 0 && sy < height) {
                     let size = (1 - this.z / 1500) * 3;
                     let alpha = (1 - this.z / 1500);
-                    ctx.beginPath();
-                    ctx.moveTo(px, py);
-                    ctx.lineTo(sx, sy);
-                    ctx.lineWidth = size;
-                    ctx.strokeStyle = `rgba(${100 + Math.random()*155}, ${200 + Math.random()*55}, 255, ${alpha})`;
-                    ctx.lineCap = 'round';
-                    ctx.stroke();
+                    
+                    if(this.isText && this.z < 800) {
+                        ctx.font = `${Math.max(10, size*4)}px monospace`;
+                        ctx.fillStyle = `rgba(0, 243, 255, ${alpha})`;
+                        ctx.fillText(this.text, sx, sy);
+                    } else {
+                        ctx.beginPath();
+                        ctx.moveTo(px, py);
+                        ctx.lineTo(sx, sy);
+                        ctx.lineWidth = size;
+                        ctx.strokeStyle = `rgba(${100 + Math.random()*155}, ${200 + Math.random()*55}, 255, ${alpha})`;
+                        ctx.lineCap = 'round';
+                        ctx.stroke();
+                    }
                 }
             }
         }
-        for(let i=0; i<400; i++) stars.push(new Star());
+        for(let i=0; i<450; i++) stars.push(new Particle());
+        
         function animateStars() {
             ctx.fillStyle = 'rgba(5, 5, 16, 0.4)';
             ctx.fillRect(0, 0, width, height);
@@ -527,9 +589,163 @@
             mouseY = e.clientY;
         });
 
-        // --- 2. Cursor ---
+        // --- 2. Audio & Visualizer ---
+        let audioCtx = null;
+        let analyser = null;
+        let dataArray = null;
+        let soundEnabled = false;
+        let vizCtx = document.getElementById('viz-canvas').getContext('2d');
+        let vizWidth = 300;
+        let vizHeight = 300;
+
+        function initAudio() {
+            if(!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 64;
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('btn-sound');
+            if(soundEnabled) {
+                initAudio();
+                if(audioCtx.state === 'suspended') audioCtx.resume();
+                btn.innerText = "[ AUDIO: ONLINE ]";
+                btn.style.color = "var(--neon-green)";
+                playSound(1200, 'sine');
+                drawVisualizer(); 
+            } else {
+                btn.innerText = "[ AUDIO: OFF ]";
+                btn.style.color = "var(--neon-green)";
+            }
+        }
+
+        function playSound(freq, type) {
+            if(!soundEnabled || !audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(freq/4, audioCtx.currentTime + 0.3);
+            
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            
+            osc.connect(gain);
+            gain.connect(analyser); 
+            analyser.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+        }
+
+        function drawVisualizer() {
+            if(!soundEnabled) return;
+            requestAnimationFrame(drawVisualizer);
+            
+            analyser.getByteFrequencyData(dataArray);
+            vizCtx.clearRect(0, 0, vizWidth, vizHeight);
+            
+            const centerX = vizWidth / 2;
+            const centerY = vizHeight / 2;
+            const radius = 60; 
+            
+            vizCtx.beginPath();
+            for(let i = 0; i < dataArray.length; i++) {
+                const barHeight = dataArray[i] / 2;
+                const angle = (i / dataArray.length) * Math.PI * 2;
+                const x1 = centerX + Math.cos(angle) * radius;
+                const y1 = centerY + Math.sin(angle) * radius;
+                const x2 = centerX + Math.cos(angle) * (radius + barHeight);
+                const y2 = centerY + Math.sin(angle) * (radius + barHeight);
+                
+                vizCtx.moveTo(x1, y1);
+                vizCtx.lineTo(x2, y2);
+            }
+            vizCtx.lineWidth = 2;
+            vizCtx.strokeStyle = 'rgba(0, 243, 255, 0.5)';
+            vizCtx.stroke();
+
+            vizCtx.beginPath();
+            for(let i = 0; i < dataArray.length; i++) {
+                const barHeight = dataArray[i] / 3; 
+                const angle = (i / dataArray.length) * Math.PI * 2;
+                const x1 = centerX + Math.cos(angle) * (radius - 5);
+                const y1 = centerY + Math.sin(angle) * (radius - 5);
+                const x2 = centerX + Math.cos(angle) * (radius - 5 - barHeight);
+                const y2 = centerY + Math.sin(angle) * (radius - 5 - barHeight);
+                
+                vizCtx.moveTo(x1, y1);
+                vizCtx.lineTo(x2, y2);
+            }
+            vizCtx.strokeStyle = 'rgba(255, 0, 85, 0.3)';
+            vizCtx.stroke();
+        }
+
+        // --- 3. Interaction Effects ---
+        const coreLight = document.getElementById('core-light');
         const cursor = document.getElementById('cursor-follower');
         const cursorRing = cursor.querySelector('.cursor-ring');
+        
+        function createShockwave(e) {
+            const wave = document.createElement('div');
+            wave.className = 'shockwave';
+            wave.style.left = e.clientX + 'px';
+            wave.style.top = e.clientY + 'px';
+            document.body.appendChild(wave);
+            
+            if(soundEnabled) playSound(200, 'triangle');
+
+            setTimeout(() => wave.remove(), 600);
+        }
+
+        function onHoverGame(color) {
+            if(color === 'red') {
+                coreLight.style.background = 'radial-gradient(circle, #fff 0%, var(--neon-red) 60%, transparent 100%)';
+                coreLight.style.boxShadow = '0 0 60px var(--neon-red), 0 0 100px var(--neon-red)';
+                cursor.className = 'attack';
+            } else if(color === 'purple') {
+                coreLight.style.background = 'radial-gradient(circle, #fff 0%, var(--neon-purple) 60%, transparent 100%)';
+                coreLight.style.boxShadow = '0 0 60px var(--neon-purple), 0 0 100px var(--neon-purple)';
+                cursor.className = 'attack';
+                cursorRing.style.borderColor = 'var(--neon-purple)';
+            } else {
+                coreLight.style.background = 'radial-gradient(circle, #fff 0%, var(--neon-blue) 60%, transparent 100%)';
+                coreLight.style.boxShadow = '0 0 60px var(--neon-blue), 0 0 100px var(--neon-blue)';
+                cursor.className = 'attack';
+                cursorRing.style.borderColor = 'var(--neon-blue)';
+            }
+            speedMult = 5;
+            
+            let freq = 800;
+            if(color === 'red') freq = 600;
+            if(color === 'purple') freq = 1000;
+            playSound(freq, 'square');
+        }
+
+        function onLeaveGame() {
+            coreLight.style.background = 'radial-gradient(circle, #fff 0%, var(--neon-blue) 60%, transparent 100%)';
+            coreLight.style.boxShadow = '0 0 40px var(--neon-blue), 0 0 80px var(--neon-blue)';
+            cursor.className = '';
+            cursorRing.style.borderColor = 'var(--neon-blue)';
+            speedMult = 1;
+        }
+
+        function tiltCard(e, card) {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const cx = rect.width / 2;
+            const cy = rect.height / 2;
+            const rotateX = ((y - cy) / cy) * -15;
+            const rotateY = ((x - cx) / cx) * 15;
+            card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+        }
+
+        // --- 4. Cursor Trail ---
         const trails = [];
         const MAX_TRAILS = 12;
 
@@ -563,77 +779,6 @@
             requestAnimationFrame(animateTrails);
         }
         animateTrails();
-
-        // --- 3. Interaction (Simplified) ---
-        const coreLight = document.getElementById('core-light');
-
-        function onHoverGame(color) {
-            if(color === 'red') {
-                coreLight.style.background = 'radial-gradient(circle, #fff 0%, var(--neon-red) 60%, transparent 100%)';
-                coreLight.style.boxShadow = '0 0 60px var(--neon-red), 0 0 100px var(--neon-red)';
-                cursor.className = 'attack';
-            } else {
-                coreLight.style.background = 'radial-gradient(circle, #fff 0%, var(--neon-blue) 60%, transparent 100%)';
-                coreLight.style.boxShadow = '0 0 60px var(--neon-blue), 0 0 100px var(--neon-blue)';
-                cursor.className = 'attack';
-                cursorRing.style.borderColor = 'var(--neon-blue)';
-            }
-            speedMult = 5;
-            playSound(color === 'red' ? 600 : 800, 'square');
-        }
-
-        function onLeaveGame() {
-            coreLight.style.background = 'radial-gradient(circle, #fff 0%, var(--neon-blue) 60%, transparent 100%)';
-            coreLight.style.boxShadow = '0 0 40px var(--neon-blue), 0 0 80px var(--neon-blue)';
-            cursor.className = '';
-            cursorRing.style.borderColor = 'var(--neon-blue)';
-            speedMult = 1;
-        }
-
-        function tiltCard(e, card) {
-            const rect = card.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            const cx = rect.width / 2;
-            const cy = rect.height / 2;
-            const rotateX = ((y - cy) / cy) * -15;
-            const rotateY = ((x - cx) / cx) * 15;
-            card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
-        }
-
-        // --- 4. Audio ---
-        let audioCtx = null;
-        let soundEnabled = false;
-
-        function toggleSound() {
-            soundEnabled = !soundEnabled;
-            const btn = document.getElementById('btn-sound');
-            if(soundEnabled) {
-                if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if(audioCtx.state === 'suspended') audioCtx.resume();
-                btn.innerText = "[ AUDIO: ONLINE ]";
-                btn.style.color = "var(--neon-green)";
-                playSound(1200, 'sine');
-            } else {
-                btn.innerText = "[ AUDIO: OFF ]";
-                btn.style.color = "var(--neon-green)";
-            }
-        }
-
-        function playSound(freq, type) {
-            if(!soundEnabled || !audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = type;
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(freq/4, audioCtx.currentTime + 0.2);
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.2);
-        }
 
         // --- 5. Boot ---
         window.onload = () => {
